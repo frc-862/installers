@@ -13,8 +13,8 @@ $ADVANTAGESCOPE_VER = "2.3.0"
 
 $WPILIB_LINK = "https://github.com/wpilibsuite/allwpilib/releases/download/v2023.4.3/WPILib_Windows-2023.4.3.iso"
 
-$GIT_COMMAND = "winget install --id Git.Git -e --source winget"
-$LAZYGIT_COMMAND = "winget install -e --id=JesseDuffield.lazygit"
+# $GIT_COMMAND = "winget install --id Git.Git -e --source winget"
+# $LAZYGIT_COMMAND = "winget install -e --id=JesseDuffield.lazygit"
 
 # Set-Variable -Name path -Value "D:\frc\installers" -Scope Script # debug
 Set-Variable -Name path -Value "C:\Users\Public\Downloads" -Scope Script
