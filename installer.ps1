@@ -3,9 +3,11 @@ Add-Type -AssemblyName System.Windows.Forms,PresentationFramework;
 # Plans: add uninstaller and cpp sim support
 # - auto check for updates from github
 
+$DBUG = $true
+
 $VER = "1.0"
 $FONT_FAMILY = "Microsoft Sans Serif"
-$WIN_SIZE = New-Object System.Drawing.Size(490, 500)
+$WIN_SIZE = New-Object System.Drawing.Size(490, 485)
 $WIN_TITLE = "2024 FRC Tools Installer"
 
 $WPILIB_VER = "2023.4.3"
@@ -16,8 +18,11 @@ $WPILIB_LINK = "https://github.com/wpilibsuite/allwpilib/releases/download/v2023
 # $GIT_COMMAND = "winget install --id Git.Git -e --source winget"
 # $LAZYGIT_COMMAND = "winget install -e --id=JesseDuffield.lazygit"
 
-# Set-Variable -Name path -Value "D:\frc\installers" -Scope Script # debug
-Set-Variable -Name path -Value "C:\Users\Public\Downloads" -Scope Script
+if ($DBUG) {
+    Set-Variable -Name path -Value "D:\frc\installers" -Scope Script # debug
+} else {
+    Set-Variable -Name path -Value "C:\Users\Public\Downloads" -Scope Script
+}
 Set-Variable -Name isCreatingFolder -Value $true -Scope Script
 Set-Variable -Name itemsToInstall -Value @() -Scope Script
 
@@ -25,6 +30,17 @@ Set-Variable -Name currentInstallStep -Value 0 -Scope Script
 Set-Variable -Name installStepsMax -Value 0 -Scope Script
 Set-Variable -Name currentPackageIndex -Value 0 -Scope Script
 Set-Variable -Name packageMax -Value 0 -Scope Script
+
+# computes diff in spacing combining two controls (debugging for centering)
+Function DiffTuner {
+    param (
+        $left,
+        $right
+    )
+    # Write-Host $left.Left
+    # Write-Host ($win.Width - $right.Right)
+    Write-Host ((($left.Left + ($win.Width - $right.Right))/2) - $left.Left -3) -ForegroundColor Green
+}
 
 Function ShowProgressBar {
     param (
@@ -82,7 +98,7 @@ Function CenterControl {
     if ($null -eq $window) {
         $window = $win
     }
-    $ctrl.Left = (($window.Width - $ctrl.Width) / 2) + $offset - 5
+    $ctrl.Left = (($window.Width - $ctrl.Width) / 2) + $offset - 3
 }
 
 $win = New-Object System.Windows.Forms.Form
@@ -93,6 +109,14 @@ $win.FormBorderStyle = "FixedSingle"
 # $win.AutoSize = $true
 $win.Size = $WIN_SIZE
 $win.Text = $WIN_TITLE
+
+if ($DBUG) {
+    $l_debugText = New-Object System.Windows.Forms.Label
+    $l_debugText.AutoSize = $true
+    $l_debugText.Text = "Debug is set!"
+    $l_debugText.ForeColor = "Red"
+    $win.Controls.Add($l_debugText)
+}
 
 $l_title = New-Object System.Windows.Forms.Label
 $l_title.AutoSize = $true
@@ -146,7 +170,7 @@ $t_currentDownloadDir.Add_TextChanged({
     CheckReadyInstall
 })
 $win.Controls.Add($t_currentDownloadDir)
-CenterControl -ctrl $t_currentDownloadDir -offset -48
+CenterControl -ctrl $t_currentDownloadDir -offset -46
 
 # incredibly annoying becuase without .net core, you can't use CommonOpenFileDialog and this dialog SUCKS but whatever
 $f_mainInstallersDirFileDialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -260,7 +284,7 @@ $g_selections.Controls.Add($c_selectSimSupport)
 # break in code just for my sake so im not going crazy editing things i dont want to be ediitng (im going clinically insane)
 
 $b_cancel = New-Object System.Windows.Forms.Button
-$b_cancel.Top = $win.Bottom - 125
+$b_cancel.Top = $win.Bottom - 110
 $b_cancel.Size = New-Object System.Drawing.Size(187, 50)
 $b_cancel.Font = New-Object System.Drawing.Font($FONT_FAMILY, 10)
 $b_cancel.Text = "Exit"
@@ -268,7 +292,7 @@ $b_cancel.Add_Click({
     $win.Close()
 })
 $win.Controls.Add($b_cancel)
-CenterControl -ctrl $b_cancel -offset -108
+CenterControl -ctrl $b_cancel -offset -106
 
 $p_progressBar = New-Object System.Windows.Forms.ProgressBar
 $p_progressBar.Size = New-Object System.Drawing.Size(400, 20)
@@ -308,7 +332,7 @@ $b_progressBarPlaceholderConfirm.Top = $l_progressBar.Top + 10
 CenterControl -ctrl $b_progressBarPlaceholderConfirm
 
 $b_startInstall = New-Object System.Windows.Forms.Button
-$b_startInstall.Top = $win.Bottom - 125
+$b_startInstall.Top = $win.Bottom - 110
 $b_startInstall.Size = New-Object System.Drawing.Size(187, 50)
 $b_startInstall.Font = New-Object System.Drawing.Font($FONT_FAMILY, 10, [System.Drawing.FontStyle]::Bold)
 $b_startInstall.Text = "Start Install"
@@ -363,7 +387,7 @@ $l_notAffiliated.Font = New-Object System.Drawing.Font($FONT_FAMILY, 6)
 $l_notAffiliated.Text = "v" + $VER + " | Made by Team 862 | Not Affiliated with FIRST"
 $l_notAffiliated.TextAlign = "MiddleRight"
 $win.Controls.Add($l_notAffiliated)
-$l_notAffiliated.Top = $win.Bottom - $l_notAffiliated.Height - 40
+$l_notAffiliated.Top = $win.Bottom - $l_notAffiliated.Height - 30
 
 # confirm dialog
 $win_confirm = New-Object System.Windows.Forms.Form
@@ -424,16 +448,16 @@ $sConf_b_startInstall.Add_Click({
             "WPILib" {
                 $pBarSteps += 2
             }
-            "Git" {
-                $pBarSteps += 1
-            }
             "LazyGit" {
                 $pBarSteps += 1
+                if ($c_selectLazygitTheme.Checked) {
+                    $pBarSteps += 1
+                }
+                if ($c_selectLazygitAddPath.Checked) {
+                    $pBarSteps += 1
+                }
             }
-            "AdvantageScope" {
-                $pBarSteps += 1
-            }
-            "SimSupport" {
+            default {
                 $pBarSteps += 1
             }
         }
@@ -451,7 +475,7 @@ $win_confirm.Controls.Add($sConf_b_startInstall)
 
 $installQueue_continueOnce = $false
 $timer_installQueue = New-Object System.Windows.Forms.Timer
-$timer_installQueue.Interval = 100
+$timer_installQueue.Interval = 500 # hmmmm i wonder if this is too fast
 $timer_installQueue.Add_Tick({
     if ($installQueue_continueOnce -eq $false) { return }
     Set-Variable -Name installQueue_continueOnce -Value $false -Scope Script
@@ -499,7 +523,7 @@ Function InstallItem {
                 $l_progressBar.Text = "[2/" + $installStepsMax + "] Launching WPILib " + $WPILIB_VER + " Installer..."
                 CenterControl -ctrl $l_progressBar
 
-                if ($(Test-Path ($path + "\WPILIB_Windows-" + $WPILIB_VER + ".iso")) -eq $false) {
+                if ($(Test-Path ($path + "\WPILIB_Window-" + $WPILIB_VER + ".iso")) -eq $false) {
                     $l_progressBar.Text = "Failed to install WPILib " + $WPILIB_VER
                     CenterControl -ctrl $l_progressBar
                     [System.Windows.MessageBox]::Show("Could not locate download. Check the path or try downloading and installing manually.", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
@@ -507,11 +531,14 @@ Function InstallItem {
                     return
                 }
 
-                $driveLetter = (Mount-DiskImage -ImagePath ($path + "\WPILIB_Windows-" + $WPILIB_VER + ".iso") -PassThru | Get-Volume).DriveLetter
-
-                Invoke-Expression ($driveLetter + ":\WPILibInstaller.exe")
+                if ($DBUG -eq $false) {
+                    $driveLetter = (Mount-DiskImage -ImagePath ($path + "\WPILIB_Windows-" + $WPILIB_VER + ".iso") -PassThru | Get-Volume).DriveLetter
+                    Invoke-Expression ($driveLetter + ":\WPILibInstaller.exe")
+                }
 
                 # maybeeeee check the actual installer window progress somehow and update the progress bar accordingly here maybe instead of waiting for user input to continue ahahaahahhh
+                # then unmount when done maybe? idk
+
                 if ($installStepsMax -eq $currentInstallStep) {
                     $timer_installQueue.Stop()
                     ShowFinishedState
@@ -521,36 +548,32 @@ Function InstallItem {
                 }
                 $timer_afterWPIInstallContinue.Start()
             })
-            $webClient.DownloadFileAsync($WPILIB_LINK, "." + "\WPILib_Windows-" + $WPILIB_VER + ".iso")
-            # $webClient.DownloadFileAsync("https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.progressbar?view=windowsdesktop-7.0", "." + "\WPILib_Window-" + $WPILIB_VER + ".iso") # debug test
+            if ($DBUG) {
+                $webClient.DownloadFileAsync("https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.progressbar?view=windowsdesktop-7.0", "." + "\WPILib_Window-" + $WPILIB_VER + ".iso") # debug test
+            } else {
+                $webClient.DownloadFileAsync($WPILIB_LINK, "." + "\WPILib_Windows-" + $WPILIB_VER + ".iso")
+            }
         }
         "Git" {
             Set-Variable -Name currentInstallStep -Value ($currentInstallStep + 1) -Scope Script
             $l_progressBar.Text = "[" + $currentInstallStep + "/" + $installStepsMax + "] Installing Git..."
             CenterControl -ctrl $l_progressBar
-            # one time it spammed this message box, and i have no idea what happened but it doesnt seem to do that anymore??
-            [System.Windows.MessageBox]::Show("Git is not currently supported. Please install manually.", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+
+            if ($DBUG -eq $false) {
+                Invoke-Expression ($GIT_COMMAND)
+            }
+
+            Set-Variable -Name installQueue_continueOnce -Value $true -Scope Script
         }
         "LazyGit" {
-            # [System.Windows.MessageBox]::Show("LazyGit is not currently supported. Please install manually.", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+            Set-Variable -Name currentInstallStep -Value ($currentInstallStep + 1) -Scope Script
+            $l_progressBar.Text = "[" + $currentInstallStep + "/" + $installStepsMax + "] Installing LazyGit..."
+            CenterControl -ctrl $l_progressBar
+            [System.Windows.MessageBox]::Show("LazyGit is not currently supported. Please install manually.", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
         }
     }
 
 }
-
-# computes diff in spacing combining two controls (debugging for centering)
-Function DiffTuner {
-    param (
-        $left,
-        $right
-    )
-    # Write-Host $left.Left
-    # Write-Host ($win.Width - $right.Right)
-    Write-Host ((($left.Left + ($win_confirm.Width - $right.Right - 5))/2) - $left.Left) -ForegroundColor Green
-}
-
-# DiffTuner $sConf_b_cancel $sConf_b_startInstall
-
 
 $fonts = @("Rage Italic", "Wingdings", "Comic Sans MS", "Webdings")
 
