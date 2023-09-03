@@ -3,7 +3,7 @@ Add-Type -AssemblyName System.Windows.Forms,PresentationFramework;
 # Plans: add uninstaller and cpp sim support
 # - auto check for updates from github
 
-$DBUG = $true
+$DBUG = $false
 
 $VER = "1.0"
 $FONT_FAMILY = "Microsoft Sans Serif"
@@ -15,8 +15,8 @@ $ADVANTAGESCOPE_VER = "2.3.0"
 
 $WPILIB_LINK = "https://github.com/wpilibsuite/allwpilib/releases/download/v2023.4.3/WPILib_Windows-2023.4.3.iso"
 
-# $GIT_COMMAND = "winget install --id Git.Git -e --source winget"
-# $LAZYGIT_COMMAND = "winget install -e --id=JesseDuffield.lazygit"
+$GIT_COMMAND = "winget install --id Git.Git -e --source winget"
+$LAZYGIT_COMMAND = "winget install -e --id=JesseDuffield.lazygit"
 
 if ($DBUG) {
     Set-Variable -Name path -Value "D:\frc\installers" -Scope Script # debug
@@ -39,7 +39,7 @@ Function DiffTuner {
     )
     # Write-Host $left.Left
     # Write-Host ($win.Width - $right.Right)
-    Write-Host ((($left.Left + ($win.Width - $right.Right))/2) - $left.Left -3) -ForegroundColor Green
+    Write-Host ((($left.Left + ($win_confirm.Width - $right.Right))/2) - $left.Left -3) -ForegroundColor Green
 }
 
 Function ShowProgressBar {
@@ -71,6 +71,8 @@ Function ShowFinishedState {
     CenterControl -ctrl $l_progressBar
     $p_progressBar.Value = $p_progressBar.Maximum
     $b_cancel.Enabled = $true
+    $b_progressBarPlaceholderConfirm.Visible = $false
+    ShowProgressBar $toDisable -state $true
 }
 
 Function CheckReadyInstall {
@@ -78,7 +80,7 @@ Function CheckReadyInstall {
         $b_startInstall.Enabled = $false
         return
     }
-    if ($c_selectWPILib.Checked -eq $false -and $c_selectGit.Checked -eq $false -and $c_selectAdvantageScope.Checked -eq $false -and $c_selectSimSupport.Checked -eq $false -and $c_selectLazygit.Checked -eq $false) {
+    if ($c_selectWPILib.Checked -eq $false -and $c_selectGit.Checked -eq $false -and $c_selectAdvantageScope.Checked -eq $false -and $c_selectSimSupport.Checked -eq $false -and $c_selectLazygit.Checked -eq $false -and $c_selectNi.Checked -eq $false) {
         $b_startInstall.Enabled = $false
         return
     }
@@ -247,7 +249,7 @@ $c_selectLazygitTheme.Font = New-Object System.Drawing.Font($FONT_FAMILY, 9)
 $c_selectLazygitTheme.Text = "LR Theme"
 $c_selectLazygitTheme.Left = $c_selectLazygit.Right + 12
 $c_selectLazygitTheme.Visible = $false
-$c_selectLazygitTheme.Enabled = $false
+# $c_selectLazygitTheme.Enabled = $false
 $g_selections.Controls.Add($c_selectLazygitTheme)
 
 $c_selectLazygitAddPath = New-Object System.Windows.Forms.CheckBox
@@ -260,9 +262,19 @@ $c_selectLazygitAddPath.Visible = $false
 # $c_selectLazygitAddPath.Add_CheckedChanged({CheckReadyInstall})
 $g_selections.Controls.Add($c_selectLazygitAddPath)
 
+$c_selectNi = New-Object System.Windows.Forms.CheckBox
+$c_selectNi.AutoSize = $true
+$c_selectNi.Top = $c_selectLazygit.Bottom + 5
+$c_selectNi.Font = New-Object System.Drawing.Font($FONT_FAMILY, 9)
+$c_selectNi.Text = "NI Game Tools (driver station, etc)"
+$c_selectNi.Left = $c_selectWPILib.Left
+# $c_selectNi.Enabled = $false
+$c_selectNi.Add_CheckedChanged({CheckReadyInstall})
+$g_selections.Controls.Add($c_selectNi)
+
 $c_selectAdvantageScope = New-Object System.Windows.Forms.CheckBox
 $c_selectAdvantageScope.AutoSize = $true
-$c_selectAdvantageScope.Top = $c_selectLazygit.Bottom + 5
+$c_selectAdvantageScope.Top = $c_selectNi.Bottom + 5
 $c_selectAdvantageScope.Font = New-Object System.Drawing.Font($FONT_FAMILY, 9)
 $c_selectAdvantageScope.Text = "[v" + $ADVANTAGESCOPE_VER + "] AdvantageScope (robot log analysis)"
 $c_selectAdvantageScope.Left = $c_selectWPILib.Left
@@ -278,6 +290,7 @@ $c_selectSimSupport.Font = New-Object System.Drawing.Font($FONT_FAMILY, 9)
 $c_selectSimSupport.Text = "C++ Simulation Support"
 $c_selectSimSupport.Left = $c_selectWPILib.Left
 $c_selectSimSupport.Enabled = $false
+$c_selectSimSupport.Visible = $false # temp?
 $c_selectSimSupport.Add_CheckedChanged({CheckReadyInstall})
 $g_selections.Controls.Add($c_selectSimSupport)
 
@@ -323,6 +336,8 @@ $b_progressBarPlaceholderConfirm.Text = "Continue with Installation"
 $b_progressBarPlaceholderConfirm.Visible = $false
 $b_progressBarPlaceholderConfirm.Add_Click({
     $b_progressBarPlaceholderConfirm.Visible = $false
+    $p_progressBar.Style = "Continuous"
+    $p_progressBar.Value = 0
     $p_progressBar.Visible = $true
     $l_progressBar.Visible = $true
     Set-Variable -Name installQueue_continueOnce -Value $true -Scope Script
@@ -365,6 +380,10 @@ $b_startInstall.Add_Click({
     if ($c_selectLazygit.Checked) {
         $itemsToInstallText += "LazyGit" + ("`r`n    -> LR Theme" * $c_selectLazygitTheme.Checked) + ("`r`n    -> Command Shortcut" * $c_selectLazygitAddPath.Checked) + "`r`n"
         $(Get-Variable -Name itemsToInstall -Scope Script).Value += "LazyGit"
+    }
+    if ($c_selectNi.Checked) {
+        $itemsToInstallText += "NI Game Tools`r`n"
+        $(Get-Variable -Name itemsToInstall -Scope Script).Value += "Ni"
     }
     if ($c_selectAdvantageScope.Checked) {
         $itemsToInstallText += "AdvantageScope`r`n"
@@ -417,11 +436,11 @@ $sConf_t_items.ReadOnly = $true
 $sConf_t_items.TabStop = $false
 $win_confirm.Controls.Add($sConf_t_items)
 CenterControl -ctrl $sConf_t_items -window $win_confirm
-$sConf_t_items.Left = $sConf_t_items.Left - 3
+# $sConf_t_items.Left = $sConf_t_items.Left - 3
 
 $sConf_b_cancel = New-Object System.Windows.Forms.Button
 $sConf_b_cancel.Top = $win_confirm.Bottom - 90
-$sConf_b_cancel.Left = 30
+$sConf_b_cancel.Left = 34
 $sConf_b_cancel.Size = New-Object System.Drawing.Size(100, 40)
 $sConf_b_cancel.Font = New-Object System.Drawing.Font($FONT_FAMILY, 10)
 $sConf_b_cancel.Text = "Cancel"
@@ -432,7 +451,7 @@ $win_confirm.Controls.Add($sConf_b_cancel)
 
 $sConf_b_startInstall = New-Object System.Windows.Forms.Button
 $sConf_b_startInstall.Top = $win_confirm.Bottom - 90
-$sConf_b_startInstall.Left = $sConf_b_cancel.Right + 25
+$sConf_b_startInstall.Left = $sConf_b_cancel.Right + 26
 $sConf_b_startInstall.Size = New-Object System.Drawing.Size(100, 40)
 $sConf_b_startInstall.Font = New-Object System.Drawing.Font($FONT_FAMILY, 10, [System.Drawing.FontStyle]::Bold)
 $sConf_b_startInstall.Text = "Confirm"
@@ -475,7 +494,7 @@ $win_confirm.Controls.Add($sConf_b_startInstall)
 
 $installQueue_continueOnce = $false
 $timer_installQueue = New-Object System.Windows.Forms.Timer
-$timer_installQueue.Interval = 500 # hmmmm i wonder if this is too fast
+$timer_installQueue.Interval = 500 # maybe this is too fast or slow at this point i dont even know!
 $timer_installQueue.Add_Tick({
     if ($installQueue_continueOnce -eq $false) { return }
     Set-Variable -Name installQueue_continueOnce -Value $false -Scope Script
@@ -523,7 +542,11 @@ Function InstallItem {
                 $l_progressBar.Text = "[2/" + $installStepsMax + "] Launching WPILib " + $WPILIB_VER + " Installer..."
                 CenterControl -ctrl $l_progressBar
 
-                if ($(Test-Path ($path + "\WPILIB_Window-" + $WPILIB_VER + ".iso")) -eq $false) {
+                $checkPath = ($path + "\WPILIB_Windows-" + $WPILIB_VER + ".iso")
+                if ($DBUG) { 
+                    $checkPath = ($path + "\WPILIB_Window-" + $WPILIB_VER + ".iso")
+                }
+                if ($(Test-Path ($checkPath)) -eq $false) {
                     $l_progressBar.Text = "Failed to install WPILib " + $WPILIB_VER
                     CenterControl -ctrl $l_progressBar
                     [System.Windows.MessageBox]::Show("Could not locate download. Check the path or try downloading and installing manually.", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
@@ -546,6 +569,10 @@ Function InstallItem {
                     CenterControl -ctrl $l_progressBar
                     return
                 }
+
+                $p_progressBar.Style = "Marquee"
+                $p_progressBar.Value = $p_progressBar.Maximum # dunno if this matters but whatever
+                $p_progressBar.MarqueeAnimationSpeed = 15
                 $timer_afterWPIInstallContinue.Start()
             })
             if ($DBUG) {
@@ -559,6 +586,7 @@ Function InstallItem {
             $l_progressBar.Text = "[" + $currentInstallStep + "/" + $installStepsMax + "] Installing Git..."
             CenterControl -ctrl $l_progressBar
 
+            # check winget install
             if ($DBUG -eq $false) {
                 Invoke-Expression ($GIT_COMMAND)
             }
@@ -569,7 +597,30 @@ Function InstallItem {
             Set-Variable -Name currentInstallStep -Value ($currentInstallStep + 1) -Scope Script
             $l_progressBar.Text = "[" + $currentInstallStep + "/" + $installStepsMax + "] Installing LazyGit..."
             CenterControl -ctrl $l_progressBar
-            [System.Windows.MessageBox]::Show("LazyGit is not currently supported. Please install manually.", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+            
+            if ($DBUG -eq $true) {
+                # Invoke-Expression ($LAZYGIT_COMMAND)
+
+                if ($c_selectLazygitAddPath.Checked -eq $true) {
+                    Set-Variable -Name currentInstallStep -Value ($currentInstallStep + 1) -Scope Script
+                    $l_progressBar.Text = "[" + $currentInstallStep + "/" + $installStepsMax + "] Adding LazyGit shortcut..."
+                    CenterControl -ctrl $l_progressBar
+
+                    # $shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($env:USERPROFILE + "\Desktop\lg.lnk") # copilot generated this - i have no idea if it works
+                }
+                
+
+            }
+
+            Set-Variable -Name installQueue_continueOnce -Value $true -Scope Script
+        }
+        "Ni" {
+            Set-Variable -Name currentInstallStep -Value ($currentInstallStep + 1) -Scope Script
+            $l_progressBar.Text = "[" + $currentInstallStep + "/" + $installStepsMax + "] Installing NI Game Tools..."
+            CenterControl -ctrl $l_progressBar
+            [System.Windows.MessageBox]::Show("NI Game Tools is not yet supported. Please install manually.", "Error", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Error)
+
+            Set-Variable -Name installQueue_continueOnce -Value $true -Scope Script
         }
     }
 
@@ -577,7 +628,7 @@ Function InstallItem {
 
 $fonts = @("Rage Italic", "Wingdings", "Comic Sans MS", "Webdings")
 
-$toDisable = @($l_title, $t_currentDownloadDir, $b_showFileDialog, $b_startInstall, $c_selectWPILib, $c_selectGit, $c_selectLazygit, $c_selectLazygitTheme, $c_selectLazygitAddPath, $b_cancel)
+$toDisable = @($l_title, $t_currentDownloadDir, $b_showFileDialog, $b_startInstall, $c_selectWPILib, $c_selectGit, $c_selectLazygit, $c_selectLazygitTheme, $c_selectLazygitAddPath, $c_selectNi, $b_cancel)
 
 $win.ShowDialog() | Out-Null
 
